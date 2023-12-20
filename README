@@ -1,0 +1,28 @@
+---
+octer
+-- sidestepping read(1) limitations testing
+---
+
+---
+Usage
+-- oread [variable] < STDIN
+---- oread reads STDIN then either sets [variable] to the result
+---- or otherwise feeds it to STDOUT
+-- exposed variables
+---- `$octdump` contains the unchanged od(1) of STDIN
+---- this can be used for advanced manipulations of raw data 
+---
+
+---
+Proof of Concept
+-- this is largely a poc showing that, with od (or even hexdump using %x)
+-- its possible to sidestep the NUL variable limitation without malformed data
+---- this will not receive actual usage, and was just for testing
+---
+
+---
+Unicode support
+-- currently ./uni-table-1993 contains all characters 
+-- and their octal values of unicode version 1.1 (1993)
+-- its likely possible to easily create a table version using a dump of
+-- all of its characters, however I simply don't have time for this

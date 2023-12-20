@@ -1,0 +1,92 @@
+#!/bin/sh
+# shellcheck disable=SC2086,SC2048
+trim_all() {
+    # Usage: trim_all "   example   string    "
+
+    # Disable globbing to make the word-splitting below safe.
+    set -f
+
+    # Set the argument list to the word-splitted string.
+    # This removes all leading/trailing white-space and reduces
+    # all instances of multiple spaces to a single ("  " -> " ").
+    set -- $*
+
+    # Print the argument list as a string.
+    printf '%s\n' "$*"
+
+    # Re-enable globbing.
+    set +f
+}
+# stolen from github.com/dylanaraps/pure-sh-bible
+# MIT LICENSED; therefore idc
+
+main() {
+  while read -r input_line || [ "$input_line" ]; do
+    IFS=" "
+    set -- ${input_line};
+    while [ "$1" ]; do
+      # it should be as simple as
+      # printf $(printf '\%s' "$1")
+      # but its sightly more complex because
+      # unicode and ascii vs extended ascii
+      # 0->177 (ascii)
+      # is just single octal
+      # and printf $(printf '\%s' "$oct")
+      # works fine
+      # 302 -> 321 is double octal
+      # and requires that we first read the 3 bits
+      # then shift 1 and read the next 3 bits
+      # then output it all
+      # 341->359 is triple octal
+      # 360+ is quad octal
+      # 360 & quad are the currently largest defined
+      # codes I could find
+      # alas unicode v16 is set to release in september 2024
+      # and characters within unicode v15 are still within 360
+      # quad range
+      # currently no quintuple range is known
+      # and its not currently possible to test for it
+      if [ "$1" -lt 302 ]; then
+        # single octal
+        # 0->177
+        # I don't actually know if there is anything defined within 177->302
+        printf $(printf '\%s' "$1")
+        shift 1
+        [ "$1" ] || break
+      elif [ "$1" -le 321 ] && [ "$1" -ge 302 ]; then
+        # double octal
+        printf $(printf '\%s\%s' "$1" "$2")
+        shift 2
+        [ "$1" ] || break
+      elif [ "$1" -lt 360 ] && [ "$1" -ge 341 ]; then
+        # triple
+        printf $(printf '\%s\%s\%s' "$1" "$2" "$3")
+        shift 3
+        [ "$1" ] || break
+      elif [ "$1" -ge 360 ]; then
+        printf $(printf '\%s\%s\%s\%s' "$1" "$2" "$3" "$4")
+        shift 4
+        [ "$1" ] || break
+        # quad
+      else
+        "${ERR:?UNDEFINED RANGE @ $input_line}"|| exit 1
+      fi
+      # the correct way to do the above is to use a counter loop
+      # shifting 1 for each loop and loading the data in a separate var
+      # and then printing it all at once
+      # this would be easily reusable should quin, or larger octal ranges
+      # be defined
+      # notably \012 is \n
+    done
+  done << EOF
+$octdump
+EOF
+}
+
+octdump="$(od -t o1 -An)"
+octdump="$(trim_all "$octdump")"
+export octdump
+case "$1" in
+  ("") main ;;
+  (*) eval $(printf 'export %s="$(main)"' "$1") ;;
+esac
